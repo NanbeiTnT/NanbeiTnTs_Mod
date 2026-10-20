@@ -20,6 +20,7 @@
 | Fabric API | 0.141.6+1.21.11 |
 | 映射 | Mojang 官方映射（`officialMojangMappings`） |
 | 许可证 | MIT |
+| JDK | Gradle/Loom 运行时 25，编译 toolchain 21（**Loom 1.18.x 要求运行时 ≥ 25，CI 不能改回 21**） |
 
 > mod id 与包名是两套东西：`nanbeitnts_mod` 是资源命名空间（`assets/nanbeitnts_mod/...`、
 > 注册表 ID 前缀），`com.nanbeitnt.mod` 是 Java 包路径。两者不一致是正常的，别去"统一"。
