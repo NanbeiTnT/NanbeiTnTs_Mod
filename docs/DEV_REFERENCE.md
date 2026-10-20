@@ -31,114 +31,89 @@
 
 | 位置 | 名称 | 说明 |
 | --- | --- | --- |
-| `com.nanbeitnt.mod.NanbeiTnTSMod` | `onInitialize()` | 主入口，双端都会执行。注册物品/方块/事件在这里发起 |
-| 同上 | `MOD_ID` | `"nanbeitnts_mod"`，不要硬编码字符串，一律引用它 |
-| 同上 | `LOGGER` | 统一日志器，日志名即 mod id |
-| 同上 | `id(String path)` | 生成 `Identifier`（`nanbeitnts_mod:path`）。所有资源 ID 都走这个方法 |
+| `com.nanbeitnt.mod.NanbeiTnTSMod` | `onInitialize()` | 主入口（双端）。本模组逻辑全在客户端，这里只留 `MOD_ID`、`LOGGER`、`id()` |
+| 同上 | `MOD_ID` | `"nanbeitnts_mod"`，不要硬编码字符串 |
+| 同上 | `LOGGER` | 统一日志器 |
+| 同上 | `id(String path)` | 生成 `Identifier`，所有资源 ID 都走它 |
+| `com.nanbeitnt.mod.client.NanbeiTnTSModClient` | `onInitializeClient()` | 客户端入口：初始化模块、注册 HUD、注册 tick |
+| 同上 | `onClientTick(Minecraft)` | 轮询打开键（默认右 Shift），边沿触发开/关界面 |
 
-| 位置 | 名称 | 说明 |
-| --- | --- | --- |
-| `com.nanbeitnt.mod.client.NanbeiTnTSModClient` | `onInitializeClient()` | 客户端入口，只在客户端执行（渲染、输入、界面相关） |
-
-> `build.gradle` 开了 `splitEnvironmentSourceSets()`，所以 `src/main` 里的代码不能碰
-> `net.minecraft.client.*`，否则服务端加载时直接崩。客户端代码一律放 `src/client`。
+> `build.gradle` 开了 `splitEnvironmentSourceSets()`：`src/main` 不能碰 `net.minecraft.client.*`。
 
 ---
 
-## 2. 工具类与公共方法
+## 2. 核心结构
 
-> 放 `com.nanbeitnt.mod.util` 下的复用工具。写之前先查这张表，别重复造。
+### 模块体系
 
-| 类 | 方法 / 字段 | 说明 |
+| 类 | 职责 |
+| --- | --- |
+| `client.module.Module` | 模块基类：id、显示名、分类、enabled、expanded、设置列表，`add(setting)` 注册设置 |
+| `client.module.Category` | 分类枚举：`COMBAT` 战斗 / `HUD` 显示 / `VISUAL` 视觉 / `MISC` 杂项 |
+| `client.module.ModuleManager` | 唯一入口：`init()` 注册全部模块并读档；`all()` / `get(id)` / `byCategory(c)` / `renderHud(g)` |
+| `client.module.HudModule` | 需要在屏幕上常驻显示的模块实现它：`renderHud(GuiGraphics)` |
+
+### 设置类型（`client.setting`）
+
+| 类 | 界面表现 | 存进 JSON 的类型 |
 | --- | --- | --- |
-| — | — | （暂无） |
+| `Setting<T>` | 抽象父类，只有 id / 显示名 / 序列化 | — |
+| `BooleanSetting` | 右侧小开关 | 布尔 |
+| `NumberSetting` | 右侧滑块 + 数值，带 min/max/step | 数字 |
+| `KeySetting` | 右侧键位框，点击后按任意键 | 整数（GLFW 键码） |
+
+### 配置
+
+| 位置 | 说明 |
+| --- | --- |
+| `client.config.ConfigManager` | `save()` / `load()`，路径 `config/nanbeitnts_mod/config.json`，Gson 序列化 |
+| 触发时机 | 切开关、改设置、拖动滑块、改键、关闭界面时各存一次（够用，且不怕游戏崩） |
+
+### 界面
+
+| 类 | 说明 |
+| --- | --- |
+| `client.gui.Theme` | 深色扁平配色的全部色值，换主题只改这里 |
+| `client.gui.ClickGuiScreen` | 主界面：左分类栏 + 右卡片列，卡片可展开显示设置；全部手绘 |
+| 内部 `Hit` / `HitType` | 绘制时记录可点击区域，点击时反查。新增控件要同时补 `HitType` 和 `mouseClicked` 分支 |
 
 ---
 
-## 3. 注册内容清单
+## 3. 已注册的模块
 
-> 每加一个内容就登记一行。注册名一律小写下划线，路径与 `assets`/`data` 下的文件名一致。
+| id | 显示名 | 分类 | 可关闭 | 设置 | 说明 |
+| --- | --- | --- | --- | --- | --- |
+| `core` | 客户端核心 | 杂项 | 否 | `open_key` 打开界面的键（默认右 Shift） | 客户端自身设置 |
+| `demo_hud` | HUD 演示 | 显示 | 是 | `y_offset` 垂直位置 0–300；`show_version` 显示版本号 | P0 验证用：开启后左上角常驻一行字 |
 
-### 3.1 物品 Items
-
-| 注册名 | Java 类 | 资源文件 | 备注 |
-| --- | --- | --- | --- |
-| — | — | — | （暂无） |
-
-### 3.2 方块 Blocks
-
-| 注册名 | Java 类 | 掉落 / 挖掘等级 | 备注 |
-| --- | --- | --- | --- |
-| — | — | — | （暂无） |
-
-### 3.3 方块实体 Block Entities
-
-| 注册名 | Java 类 | 备注 |
-| --- | --- | --- |
-| — | — | （暂无） |
-
-### 3.4 实体 Entity Types
-
-| 注册名 | Java 类 | 备注 |
-| --- | --- | --- |
-| — | — | （暂无） |
-
-### 3.5 状态效果 / 附魔 / 药水
-
-| 类型 | 注册名 | Java 类 | 备注 |
-| --- | --- | --- | --- |
-| — | — | — | （暂无） |
-
-### 3.6 创造模式标签页 Creative Tabs
-
-| 注册名 | Java 类 | 包含内容 |
-| --- | --- | --- |
-| — | — | — | （暂无） |
-
-### 3.7 声音 / 粒子
-
-| 类型 | 注册名 | 备注 |
-| --- | --- | --- |
-| — | — | （暂无） |
-
----
-
-## 4. 网络与事件
-
-| 类型 | 标识 | 方向 | 说明 |
-| --- | --- | --- | --- |
-| — | — | — | （暂无） |
-
----
-
-## 5. 资源与数据文件
+## 4. 资源与数据文件
 
 | 路径 | 用途 |
 | --- | --- |
-| `src/main/resources/fabric.mod.json` | 模组元数据（id / 入口 / 依赖 / 许可证） |
+| `src/main/resources/fabric.mod.json` | 模组元数据 |
 | `src/main/resources/nanbeitnts_mod.mixins.json` | 主端 Mixin 配置 |
 | `src/client/resources/nanbeitnts_mod.client.mixins.json` | 客户端 Mixin 配置 |
-| `src/main/resources/assets/nanbeitnts_mod/icon.png` | 模组图标，128×128 |
-| `assets/nanbeitnts_mod/lang/en_us.json` | （待建）英文语言文件 |
-| `assets/nanbeitnts_mod/lang/zh_cn.json` | （待建）中文语言文件 |
-| `assets/nanbeitnts_mod/textures/` | （待建）贴图 |
-| `assets/nanbeitnts_mod/models/` | （待建）模型 JSON |
-| `data/nanbeitnts_mod/` | （待建）配方、战利品表、标签 |
+| `src/main/resources/assets/nanbeitnts_mod/icon.png` | 模组图标 128×128 |
+| `config/nanbeitnts_mod/config.json` | 运行时生成的配置（在 `.minecraft/` 下，不在仓库里） |
 
 ---
 
-## 6. 代码约定
+## 5. 代码约定
 
-- **mod id 常量**：任何 `Identifier` 都用 `NanbeiTnTSMod.id("xxx")`，不手写 `"nanbeitnts_mod:xxx"`。
-- **注释**：只写"为什么这么做"的关键一两行，不写逐行解释、不写教程式长注释。
-- **包结构**：`mod`（入口）/ `mod.registry`（注册）/ `mod.block` `mod.item` `mod.entity`（内容）/ `mod.util`（工具）/ `mod.mixin`；客户端对应 `mod.client.*`。
-- **注册时机**：所有注册在 `onInitialize()` 的静态初始化里完成，注册顺序不影响结果，但同一类内容集中在同一个 `Registry` 类里。
-- **数据生成**：需要批量生成模型/配方/标签时再引入 `fabricApi.configureDataGeneration()`，引入后本节更新。
+- **mod id 常量**：任何 `Identifier` 都用 `NanbeiTnTSMod.id("xxx")`。
+- **注释**：只写"为什么"的关键一两行，不写逐行解释。
+- **新增一个功能 = 四步**（照这个来，界面和配置都不用改）：
+  1. 在 `client.module.impl` 下新建类继承 `Module`，构造函数里 `super(id, 显示名, Category.X, true)`；
+  2. 需要设置就 `add(new XxxSetting("id", "显示名", 默认值...))`；
+  3. 要常驻显示就 `implements HudModule` 并实现 `renderHud`，要每 tick 跑就加重写的 tick 方法（后续补）；
+  4. 在 `ModuleManager.init()` 里 `register(new XxxModule())`，最后到本文档第 3 节加一行。
+- **不碰界面**：模块里不读文件、不画界面、不处理按键。
 
 ---
 
-## 7. 变更记录
+## 6. 变更记录
 
 | 日期 | 变更 |
 | --- | --- |
 | 2026-10-20 | 初版。mod id 由 `nanbeitnts-mod` 改为 `nanbeitnts_mod`；许可证改 MIT；接入 JDK 21 toolchain。 |
+| 2026-10-20 | P0 骨架：模块体系、设置类型、配置读写、深色扁平主界面、HUD 注册、可改的打开键；新增 `core`、`demo_hud` 两个模块。 |

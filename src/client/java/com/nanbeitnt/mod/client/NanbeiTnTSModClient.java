@@ -1,10 +1,46 @@
 package com.nanbeitnt.mod.client;
 
+import com.mojang.blaze3d.platform.InputConstants;
+import com.nanbeitnt.mod.NanbeiTnTSMod;
+import com.nanbeitnt.mod.client.gui.ClickGuiScreen;
+import com.nanbeitnt.mod.client.module.ModuleManager;
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.TitleScreen;
 
 public class NanbeiTnTSModClient implements ClientModInitializer {
+	private boolean openKeyWasDown;
+
 	@Override
 	public void onInitializeClient() {
-		// This entrypoint is suitable for setting up client-specific logic, such as rendering.
+		ModuleManager.init();
+
+		HudElementRegistry.addLast(NanbeiTnTSMod.id("hud"),
+				(graphics, deltaTracker) -> ModuleManager.renderHud(graphics));
+
+		ClientTickEvents.END_CLIENT_TICK.register(this::onClientTick);
+	}
+
+	/**
+	 * 打开界面的键用轮询而不是 KeyMapping：KeyMapping 注册后没法改键，
+	 * 而这个键要允许玩家在模组界面里自己换。
+	 */
+	private void onClientTick(Minecraft mc) {
+		int key = ModuleManager.core().getOpenKey().get();
+		boolean down = InputConstants.isKeyDown(mc.getWindow(), key);
+
+		if (down && !openKeyWasDown) {
+			Screen current = mc.screen;
+			if (current == null || current instanceof TitleScreen) {
+				mc.setScreen(new ClickGuiScreen());
+			} else if (current instanceof ClickGuiScreen gui) {
+				gui.onClose();
+			}
+		}
+
+		openKeyWasDown = down;
 	}
 }
