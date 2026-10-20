@@ -1,4 +1,10 @@
-# 每次 push / PR 自动构建，并把失败原因写进 Job Summary，方便直接看到错在哪。
+# 每次 push / PR 自动构建，失败时把日志摘要写进 Job Summary。
+#
+# 注意这里的双 JDK 结构，不是冗余：
+#   - JDK 25：Gradle 守护进程和 Loom 1.18.x 插件本身要求 >= 25，用 21 会在配置阶段就报
+#             "Dependency requires at least JVM runtime version 25"
+#   - JDK 21：Minecraft 1.21.11 的编译目标，通过 toolchain 使用（路径显式传给 Gradle）
+# 后安装的 25 会覆盖 JAVA_HOME，所以顺序不能反。
 
 name: build
 on: [pull_request, push]
@@ -11,13 +17,23 @@ jobs:
         uses: actions/checkout@v6
       - name: validate gradle wrapper
         uses: gradle/actions/wrapper-validation@v6
-      - name: setup jdk
+      - name: setup jdk 21
+        id: jdk21
         uses: actions/setup-java@v5
         with:
           java-version: '21'
           distribution: 'microsoft'
+      - name: setup jdk 25
+        uses: actions/setup-java@v5
+        with:
+          java-version: '25'
+          distribution: 'microsoft'
       - name: make gradle wrapper executable
         run: chmod +x ./gradlew
+      - name: point toolchain to jdk 21
+        run: |
+          mkdir -p ~/.gradle
+          echo "org.gradle.java.installations.paths=${{ steps.jdk21.outputs.path }}" >> ~/.gradle/gradle.properties
       - name: build
         run: |
           set +e
