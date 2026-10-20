@@ -1,7 +1,4 @@
-# Automatically build the project and run any configured tests for every push
-# and submitted pull request. This can help catch issues that only occur on
-# certain platforms or Java versions, and provides a first line of defence
-# against bad commits.
+# 每次 push / PR 自动构建，并把失败原因写进 Job Summary，方便直接看到错在哪。
 
 name: build
 on: [pull_request, push]
@@ -22,7 +19,20 @@ jobs:
       - name: make gradle wrapper executable
         run: chmod +x ./gradlew
       - name: build
-        run: ./gradlew build
+        run: |
+          set +e
+          ./gradlew build --stacktrace --no-daemon 2>&1 | tee build.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            {
+              echo "### 构建失败"
+              echo ""
+              echo '```'
+              tail -c 4000 build.log
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit "$status"
       - name: capture build artifacts
         uses: actions/upload-artifact@v7
         with:
