@@ -125,15 +125,19 @@ public class ClickGuiScreen extends Screen {
 
 			int toggleX = x + w - 10 - 30;
 			int toggleY = y + (CARD_H - 14) / 2;
+			int expandRight;
 			if (module.canDisable()) {
 				drawToggle(graphics, toggleX, toggleY, module.isEnabled());
 				hits.add(new Hit(toggleX - 4, y, toggleX + 34, y + CARD_H, HitType.TOGGLE, module));
+				expandRight = toggleX - 6;
 			} else {
 				graphics.drawString(font, "常开", toggleX + 2, y + 15, Theme.TEXT_DIM, false);
+				expandRight = toggleX + 36;
 			}
 
 			graphics.drawString(font, module.isExpanded() ? "-" : "+", toggleX - 14, y + 15, Theme.TEXT_DIM, false);
-			hits.add(new Hit(x, y, toggleX - 20, y + CARD_H, HitType.EXPAND, module));
+			// 展开区一直延伸到开关左边：加号画在 toggleX-14，留空隙会导致点到加号没反应
+			hits.add(new Hit(x, y, expandRight, y + CARD_H, HitType.EXPAND, module));
 
 			if (module.isExpanded()) {
 				int rowY = y + CARD_H + 4;

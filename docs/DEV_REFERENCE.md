@@ -117,3 +117,4 @@
 | --- | --- |
 | 2026-10-20 | 初版。mod id 由 `nanbeitnts-mod` 改为 `nanbeitnts_mod`；许可证改 MIT；接入 JDK 21 toolchain。 |
 | 2026-10-20 | P0 骨架：模块体系、设置类型、配置读写、深色扁平主界面、HUD 注册、可改的打开键；新增 `core`、`demo_hud` 两个模块。 |
+| 2026-10-21 | 修 `ClickGuiScreen` 点击死区：卡片展开区原本止于 `toggleX-20`，而 `+/-` 画在 `toggleX-14`，落在展开区与开关区之间的空隙里，点加号没反应。现在展开区右端贴到开关左侧（`toggleX-6`），"常开" 卡片则延伸到 `toggleX+36`。 |
