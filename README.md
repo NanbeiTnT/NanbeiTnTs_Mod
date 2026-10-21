@@ -40,6 +40,33 @@ CI 里由 `.github/workflows/build.yml` 装两个 JDK 并显式传路径，改�
 
 国内网络下 Gradle 发行包或依赖下载慢，可在 `~/.gradle/init.gradle` 里换镜像源。
 
+## 装进自己的游戏里试
+
+`./gradlew build` 之后 `build/libs/` 下会有两个文件：
+
+| 文件 | 用途 |
+| --- | --- |
+| `nanbeitnts_mod-1.0.0.jar` | **这个才是给游戏用的**（已 remap 成游戏内部名） |
+| `nanbeitnts_mod-1.0.0-sources.jar` | 源码包，只给人阅读，别丢进 mods |
+
+把前者复制到**对应版本实例**的 `mods` 目录。开着版本隔离时是：
+
+```
+.minecraft/versions/<版本名>/mods/nanbeitnts_mod-1.0.0.jar
+```
+
+关着隔离才是 `.minecraft/mods/`。放错位置游戏里不会报错，模组就是不出现，很容易误判成"没生效"。
+
+前置条件（缺任一项都会启动失败或模组不加载）：
+
+- **Fabric Loader** 0.19.5（与 `gradle.properties` 一致）
+- **Fabric API** 0.141.6+1.21.11
+- Java 21（1.21.11 本身要求）
+
+更新版本时**直接覆盖同名 jar**，不要同时留两个 —— 两个同 id 的模组会互相冲突。
+
+卸载就是删掉那个 jar，配置文件 `config/nanbeitnts_mod/config.json` 可以留着。
+
 ## 目录结构
 
 ```

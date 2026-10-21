@@ -91,10 +91,21 @@
 | 路径 | 用途 |
 | --- | --- |
 | `src/main/resources/fabric.mod.json` | 模组元数据 |
-| `src/main/resources/nanbeitnts_mod.mixins.json` | 主端 Mixin 配置 |
-| `src/client/resources/nanbeitnts_mod.client.mixins.json` | 客户端 Mixin 配置 |
+| `src/main/resources/nanbeitnts_mod.mixins.json` | 主端 Mixin 配置（当前列表为空） |
+| `src/client/resources/nanbeitnts_mod.client.mixins.json` | 客户端 Mixin 配置（当前列表为空） |
 | `src/main/resources/assets/nanbeitnts_mod/icon.png` | 模组图标 128×128 |
 | `config/nanbeitnts_mod/config.json` | 运行时生成的配置（在 `.minecraft/` 下，不在仓库里） |
+
+### 关于 Mixin（重要）
+
+两个 mixin 配置目前都是**空列表**，模板自带的 `ExampleMixin` / `ExampleClientMixin` 已删除。
+原因：生产环境的 mixin 需要 refmap 把 Mojmap 方法名翻译成 intermediary 名，而打包产物里没有生成 refmap，
+`required: true` 会让游戏启动时直接崩。骨架阶段用不到 mixin，先清空。
+
+以后真要写 mixin 时：在 `client/mixin/` 下建类并加进 `nanbeitnts_mod.client.mixins.json` 的 `client` 数组，
+然后**必须用生产 jar 实测一次**（`./gradlew runClient` 跑的是开发环境，掩盖 refmap 问题）。
+若加载报 "no refmap" 之类，需要在 mixin json 里补 `"refmap": "nanbeitnts_mod-refmap.json"` 并让 Loom 生成。
+
 
 ---
 
@@ -118,3 +129,4 @@
 | 2026-10-20 | 初版。mod id 由 `nanbeitnts-mod` 改为 `nanbeitnts_mod`；许可证改 MIT；接入 JDK 21 toolchain。 |
 | 2026-10-20 | P0 骨架：模块体系、设置类型、配置读写、深色扁平主界面、HUD 注册、可改的打开键；新增 `core`、`demo_hud` 两个模块。 |
 | 2026-10-21 | 修 `ClickGuiScreen` 点击死区：卡片展开区原本止于 `toggleX-20`，而 `+/-` 画在 `toggleX-14`，落在展开区与开关区之间的空隙里，点加号没反应。现在展开区右端贴到开关左侧（`toggleX-6`），"常开" 卡片则延伸到 `toggleX+36`。 |
+| 2026-10-21 | 删除模板示例 mixin（无 refmap 会在生产环境崩），两个 mixin 配置清空；产出可直接安装的发布 jar 并在真实 1.21.11 实例中验证通过。 |
