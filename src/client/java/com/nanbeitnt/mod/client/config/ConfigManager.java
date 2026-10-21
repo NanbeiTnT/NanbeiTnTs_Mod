@@ -5,6 +5,8 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.nanbeitnt.mod.NanbeiTnTSMod;
+import com.nanbeitnt.mod.client.module.HudModule;
+import com.nanbeitnt.mod.client.module.HudWidget;
 import com.nanbeitnt.mod.client.module.Module;
 import com.nanbeitnt.mod.client.module.ModuleManager;
 import com.nanbeitnt.mod.client.setting.Setting;
@@ -41,6 +43,18 @@ public final class ConfigManager {
 				values.add(setting.getId(), setting.toJson());
 			}
 			entry.add("settings", values);
+
+			if (module instanceof HudModule hud) {
+				JsonObject widgets = new JsonObject();
+				for (HudWidget widget : hud.widgets()) {
+					JsonObject pos = new JsonObject();
+					pos.addProperty("x", widget.getX());
+					pos.addProperty("y", widget.getY());
+					pos.addProperty("scale", widget.getScale());
+					widgets.add(widget.getId(), pos);
+				}
+				entry.add("widgets", widgets);
+			}
 
 			modules.add(module.getId(), entry);
 		}
@@ -82,6 +96,19 @@ public final class ConfigManager {
 						JsonElement value = values.get(setting.getId());
 						if (value != null) {
 							setting.fromJson(value);
+						}
+					}
+				}
+				if (entry.has("widgets") && module instanceof HudModule hud) {
+					JsonObject widgets = entry.getAsJsonObject("widgets");
+					for (HudWidget widget : hud.widgets()) {
+						if (!widgets.has(widget.getId())) {
+							continue;
+						}
+						JsonObject pos = widgets.getAsJsonObject(widget.getId());
+						widget.setPosition(pos.get("x").getAsInt(), pos.get("y").getAsInt());
+						if (pos.has("scale")) {
+							widget.setScale(pos.get("scale").getAsFloat());
 						}
 					}
 				}

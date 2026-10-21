@@ -1,10 +1,12 @@
 package com.nanbeitnt.mod.client.gui;
 
+import com.nanbeitnt.mod.client.NanbeiTnTSModClient;
 import com.nanbeitnt.mod.client.config.ConfigManager;
 import com.nanbeitnt.mod.client.module.Category;
 import com.nanbeitnt.mod.client.module.Module;
 import com.nanbeitnt.mod.client.module.ModuleManager;
 import com.nanbeitnt.mod.client.setting.BooleanSetting;
+import com.nanbeitnt.mod.client.setting.ButtonSetting;
 import com.nanbeitnt.mod.client.setting.KeySetting;
 import com.nanbeitnt.mod.client.setting.NumberSetting;
 import com.nanbeitnt.mod.client.setting.Setting;
@@ -26,7 +28,7 @@ import java.util.Locale;
  */
 public class ClickGuiScreen extends Screen {
 	private static final int SIDEBAR_W = 128;
-	private static final int HEADER_H = 46;
+	private static final int HEADER_H = 34;
 	private static final int CARD_H = 38;
 	private static final int ROW_H = 24;
 
@@ -71,9 +73,12 @@ public class ClickGuiScreen extends Screen {
 		graphics.fill(panelX, panelY, panelX + panelW, panelY + panelH, Theme.PANEL);
 		graphics.renderOutline(panelX, panelY, panelW, panelH, Theme.BORDER);
 
-		graphics.drawString(font, "NanbeiTnT's Mod", panelX + 16, panelY + 15, Theme.ACCENT, false);
-		String hint = "右Shift 关闭 · v1.0.0";
-		graphics.drawString(font, hint, panelX + panelW - 16 - font.width(hint), panelY + 15, Theme.TEXT_DIM, false);
+		// 标题栏只有 34 高，文字要按行高居中；+1 是因为字形墨迹比 drawString 的 y 低一点
+		int headerTextY = panelY + (HEADER_H - 9) / 2 + 1;
+		graphics.drawString(font, "NanbeiTnT's Mod", panelX + 16, headerTextY, Theme.ACCENT, false);
+		// 提示里的键名跟着设置走，改键后标题栏会跟着变
+		String hint = ModuleManager.core().getOpenKey().getDisplayName() + " 关闭 · v1.0.0";
+		graphics.drawString(font, hint, panelX + panelW - 16 - font.width(hint), headerTextY, Theme.TEXT_DIM, false);
 		graphics.fill(panelX, panelY + HEADER_H - 1, panelX + panelW, panelY + HEADER_H, Theme.BORDER);
 
 		graphics.fill(panelX, panelY + HEADER_H, panelX + SIDEBAR_W, panelY + panelH, Theme.SIDEBAR);
@@ -116,7 +121,9 @@ public class ClickGuiScreen extends Screen {
 
 		int total = 0;
 		for (Module module : modules) {
-			int cardH = CARD_H + (module.isExpanded() ? module.getSettings().size() * ROW_H + 8 : 0);
+			// 没有设置项的卡片就是个纯开关：不画加减号，也不留展开区
+			boolean hasSettings = !module.getSettings().isEmpty();
+			int cardH = CARD_H + (hasSettings && module.isExpanded() ? module.getSettings().size() * ROW_H + 8 : 0);
 			boolean hover = isInside(mouseX, mouseY, x, y, x + w, y + CARD_H);
 
 			graphics.fill(x, y, x + w, y + cardH, hover ? Theme.CARD_HOVER : Theme.CARD);
@@ -125,21 +132,30 @@ public class ClickGuiScreen extends Screen {
 
 			int toggleX = x + w - 10 - 30;
 			int toggleY = y + (CARD_H - 14) / 2;
-			int expandRight;
 			if (module.canDisable()) {
 				drawToggle(graphics, toggleX, toggleY, module.isEnabled());
 				hits.add(new Hit(toggleX - 4, y, toggleX + 34, y + CARD_H, HitType.TOGGLE, module));
-				expandRight = toggleX - 6;
-			} else {
-				graphics.drawString(font, "常开", toggleX + 2, y + 15, Theme.TEXT_DIM, false);
-				expandRight = toggleX + 36;
 			}
 
-			graphics.drawString(font, module.isExpanded() ? "-" : "+", toggleX - 14, y + 15, Theme.TEXT_DIM, false);
-			// 展开区一直延伸到开关左边：加号画在 toggleX-14，留空隙会导致点到加号没反应
-			hits.add(new Hit(x, y, expandRight, y + CARD_H, HitType.EXPAND, module));
+			if (hasSettings) {
+				String icon = module.isExpanded() ? "-" : "+";
+				int iconX;
+				int expandRight;
+				if (module.canDisable()) {
+					iconX = toggleX - 14;
+					expandRight = toggleX - 6;
+				} else {
+					// 不可关闭的卡片没有开关，加减号居中填进开关那块空位
+					iconX = toggleX + (30 - font.width(icon)) / 2;
+					expandRight = toggleX + 36;
+				}
 
-			if (module.isExpanded()) {
+				graphics.drawString(font, icon, iconX, y + 15, Theme.TEXT_DIM, false);
+				// 展开区一直延伸到开关左边：加号画在 toggleX-14，留空隙会导致点到加号没反应
+				hits.add(new Hit(x, y, expandRight, y + CARD_H, HitType.EXPAND, module));
+			}
+
+			if (hasSettings && module.isExpanded()) {
 				int rowY = y + CARD_H + 4;
 				for (Setting<?> setting : module.getSettings()) {
 					drawSetting(graphics, font, setting, x + 10, rowY, w - 20);
@@ -156,6 +172,17 @@ public class ClickGuiScreen extends Screen {
 
 	private void drawSetting(GuiGraphics graphics, Font font, Setting<?> setting, int x, int y, int width) {
 		graphics.drawString(font, setting.getName(), x, y + 8, Theme.TEXT_DIM, false);
+
+		if (setting instanceof ButtonSetting button) {
+			int boxW = 56;
+			int boxX = x + width - boxW;
+			graphics.fill(boxX, y + 3, boxX + boxW, y + ROW_H - 3, Theme.TRACK);
+			graphics.renderOutline(boxX, y + 3, boxW, ROW_H - 6, Theme.BORDER);
+			String label = "打开";
+			graphics.drawString(font, label, boxX + (boxW - font.width(label)) / 2, y + 8, Theme.TEXT, false);
+			hits.add(new Hit(boxX, y, boxX + boxW, y + ROW_H, HitType.BUTTON, button));
+			return;
+		}
 
 		if (setting instanceof BooleanSetting bool) {
 			int toggleX = x + width - 30;
@@ -242,6 +269,7 @@ public class ClickGuiScreen extends Screen {
 					updateSlider(event.x());
 				}
 				case KEY -> awaitingKey = (KeySetting) hit.target;
+				case BUTTON -> ((ButtonSetting) hit.target).run();
 			}
 			return true;
 		}
@@ -277,6 +305,7 @@ public class ClickGuiScreen extends Screen {
 			awaitingKey.set(event.key());
 			awaitingKey = null;
 			ConfigManager.save();
+			NanbeiTnTSModClient.suppressOpenKeyUntilRelease();
 			return true;
 		}
 		return super.keyPressed(event);
@@ -297,7 +326,7 @@ public class ClickGuiScreen extends Screen {
 	}
 
 	private enum HitType {
-		CATEGORY, TOGGLE, EXPAND, BOOL, SLIDER, KEY
+		CATEGORY, TOGGLE, EXPAND, BOOL, SLIDER, KEY, BUTTON
 	}
 
 	private record Hit(int x1, int y1, int x2, int y2, HitType type, Object target) {

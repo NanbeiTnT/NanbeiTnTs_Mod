@@ -12,7 +12,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.TitleScreen;
 
 public class NanbeiTnTSModClient implements ClientModInitializer {
-	private boolean openKeyWasDown;
+	private static boolean openKeyWasDown;
 
 	@Override
 	public void onInitializeClient() {
@@ -21,6 +21,7 @@ public class NanbeiTnTSModClient implements ClientModInitializer {
 		HudElementRegistry.addLast(NanbeiTnTSMod.id("hud"),
 				(graphics, deltaTracker) -> ModuleManager.renderHud(graphics));
 
+		ClientTickEvents.START_CLIENT_TICK.register(ModuleManager::tick);
 		ClientTickEvents.END_CLIENT_TICK.register(this::onClientTick);
 	}
 
@@ -42,5 +43,13 @@ public class NanbeiTnTSModClient implements ClientModInitializer {
 		}
 
 		openKeyWasDown = down;
+	}
+
+	/**
+	 * 改键保存后立刻调用：把打开键记成"已按下"，压到玩家松手为止。
+	 * 不这么做的话，玩家还按着刚录制的键，轮询会把它当成一次新的按下，界面当场被关掉。
+	 */
+	public static void suppressOpenKeyUntilRelease() {
+		openKeyWasDown = true;
 	}
 }

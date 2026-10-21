@@ -1,6 +1,7 @@
 package com.nanbeitnt.mod.client.module;
 
 import com.nanbeitnt.mod.client.setting.Setting;
+import net.minecraft.client.Minecraft;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -83,6 +84,10 @@ public abstract class Module {
 	/** 仅供配置加载使用：直接套用存档里的状态，不触发 onEnable/onDisable。 */
 	public void applyLoadedState(boolean value) {
 		this.enabled = value;
+	}
+
+	/** 每个客户端 tick 调用一次，只在模块开启时会被调到。 */
+	public void onTick(Minecraft mc) {
 	}
 
 	protected void onEnable() {
