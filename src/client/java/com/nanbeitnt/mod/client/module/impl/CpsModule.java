@@ -1,5 +1,6 @@
 package com.nanbeitnt.mod.client.module.impl;
 
+import com.nanbeitnt.mod.client.gui.MiniFont;
 import com.nanbeitnt.mod.client.module.Category;
 import com.nanbeitnt.mod.client.module.HudModule;
 import com.nanbeitnt.mod.client.module.HudWidget;
@@ -37,12 +38,7 @@ public class CpsModule extends Module implements HudModule {
 		// 竖杠写死在 x=WIDTH/2。CPS 的 "CPS" 用 3×5 手绘小字（正常字号塞不下两组）
 		private static final int BAR_X = WIDTH / 2;
 		private static final int GAP = 2;
-		private static final int MINI_W = 11;
-		private static final int MINI_H = 5;
-
-		private static final String[] MINI_C = {"111", "100", "100", "100", "111"};
-		private static final String[] MINI_P = {"111", "101", "111", "100", "100"};
-		private static final String[] MINI_S = {"111", "100", "111", "001", "111"};
+		private static final int MINI_W = MiniFont.width("CPS");
 
 		private final Deque<Long> leftClicks = new ArrayDeque<>();
 		private final Deque<Long> rightClicks = new ArrayDeque<>();
@@ -78,17 +74,17 @@ public class CpsModule extends Module implements HudModule {
 			graphics.fill(x, y, x + WIDTH, y + HEIGHT, BG);
 
 			int textY = y + (HEIGHT - 9) / 2 + 1;
-			int miniY = y + (HEIGHT - MINI_H) / 2 + 1;
+			int miniY = y + (HEIGHT - MiniFont.CHAR_H) / 2 + 1;
 			graphics.fill(x + BAR_X, y + 4, x + BAR_X + 1, y + 12, BAR);
 
 			// 左组贴竖杠右边对齐、右组贴竖杠左边对齐，数字位数变化时只有外侧在动
 			int leftRight = x + BAR_X - GAP;
-			drawMiniCps(graphics, leftRight - MINI_W, miniY, TEXT);
+			MiniFont.draw(graphics, "CPS", leftRight - MINI_W, miniY, TEXT);
 			graphics.drawString(mc.font, left, leftRight - MINI_W - 2 - mc.font.width(left), textY, TEXT, true);
 
 			int rightLeft = x + BAR_X + 1 + GAP;
 			graphics.drawString(mc.font, right, rightLeft, textY, TEXT, true);
-			drawMiniCps(graphics, rightLeft + mc.font.width(right) + 2, miniY, TEXT);
+			MiniFont.draw(graphics, "CPS", rightLeft + mc.font.width(right) + 2, miniY, TEXT);
 		}
 
 		private void updateClicks(Minecraft mc) {
@@ -113,23 +109,6 @@ public class CpsModule extends Module implements HudModule {
 		private static void prune(Deque<Long> clicks, long now) {
 			while (!clicks.isEmpty() && now - clicks.peekFirst() > WINDOW_MS) {
 				clicks.pollFirst();
-			}
-		}
-
-		private static void drawMiniCps(GuiGraphics graphics, int x, int y, int color) {
-			drawMini(graphics, x, y, MINI_C, color);
-			drawMini(graphics, x + 4, y, MINI_P, color);
-			drawMini(graphics, x + 8, y, MINI_S, color);
-		}
-
-		private static void drawMini(GuiGraphics graphics, int x, int y, String[] rows, int color) {
-			for (int row = 0; row < rows.length; row++) {
-				String line = rows[row];
-				for (int col = 0; col < line.length(); col++) {
-					if (line.charAt(col) == '1') {
-						graphics.fill(x + col, y + row, x + col + 1, y + row + 1, color);
-					}
-				}
 			}
 		}
 	}

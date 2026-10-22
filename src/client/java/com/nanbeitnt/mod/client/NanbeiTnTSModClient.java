@@ -4,7 +4,9 @@ import com.mojang.blaze3d.platform.InputConstants;
 import com.nanbeitnt.mod.NanbeiTnTSMod;
 import com.nanbeitnt.mod.client.gui.ClickGuiScreen;
 import com.nanbeitnt.mod.client.module.ModuleManager;
+import com.nanbeitnt.mod.client.pack.PackSync;
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.minecraft.client.Minecraft;
@@ -16,6 +18,7 @@ public class NanbeiTnTSModClient implements ClientModInitializer {
 
 	@Override
 	public void onInitializeClient() {
+		PackSync.registerBuiltinPacks();
 		ModuleManager.init();
 
 		HudElementRegistry.addLast(NanbeiTnTSMod.id("hud"),
@@ -23,6 +26,8 @@ public class NanbeiTnTSModClient implements ClientModInitializer {
 
 		ClientTickEvents.START_CLIENT_TICK.register(ModuleManager::tick);
 		ClientTickEvents.END_CLIENT_TICK.register(this::onClientTick);
+		// 启动时把配置里的开关状态和 options.txt 里的包选择对齐；不一致才重载一次
+		ClientLifecycleEvents.CLIENT_STARTED.register(PackSync::apply);
 	}
 
 	/**
@@ -43,6 +48,11 @@ public class NanbeiTnTSModClient implements ClientModInitializer {
 		}
 
 		openKeyWasDown = down;
+
+		// 材质包开关只在主菜单落地，游戏里拨了就得等退回主菜单
+		if (PackSync.isPending() && mc.screen instanceof TitleScreen) {
+			PackSync.apply(mc);
+		}
 	}
 
 	/**

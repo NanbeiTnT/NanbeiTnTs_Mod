@@ -78,6 +78,7 @@
 | 类 | 说明 |
 | --- | --- |
 | `client.gui.Theme` | 深色扁平配色的全部色值，换主题只改这里 |
+| `client.gui.MiniFont` | 3×5 像素手绘小字（字宽 3、字距 1、字高 5，`width(text)` / `draw(g, text, x, y, color)`）。字符集：`0-9`、`C`、`P`、`S`、`m`、`s`；表里没有的字符跳过不画。**没有阴影和描边**，需要可读性时调用方自己垫底色。游戏自带字体最小 9px 高、单字 6px 宽，塞不进的地方用它，别去缩放位图字（会糊） |
 | `client.gui.ClickGuiScreen` | 主界面：左分类栏 + 右卡片列，卡片可展开显示设置；全部手绘 |
 | `client.gui.HudEditorScreen` | 拖动摆放 HUD 组件：半透明黑蒙版（不调 `super.render`，否则默认背景会糊掉游戏画面）、组件边框、右下角取消/确定；鼠标悬停在组件上滚轮 = 调整缩放（保持中心，`mouseScrolled`）；取消会把位置和缩放都还原；进入时 `ModuleManager.setHudHidden(true)`，退出时还原 |
 | 内部 `Hit` / `HitType` | 绘制时记录可点击区域，点击时反查。新增控件要同时补 `HitType` 和 `mouseClicked` 分支 |
@@ -93,8 +94,15 @@
 | `fps` | FPS 显示 | 显示 | 是 | 无 | 左上角常驻「帧数 FPS」，半透明黑底 0x80000000，盒宽随文字变，位置可拖 |
 | `hud_layout` | 组件位置 | 显示 | 否 | `edit` 按钮「自定义组件位置」→ 打开 `HudEditorScreen` | 只是入口，不是可开关功能 |
 | `keystrokes` | 按键显示 | 显示 | 是 | 无 | 7 键（W/A/S/D/空格/LMB/RMB）合成一个 58×68 的整体组件，只能整体拖；空格是 8px 扁条 + 居中 1px 横杠（不写字）；键位取 `mc.options.keyXxx.isDown()`，鼠标取 `GLFW.glfwGetMouseButton(mc.getWindow().handle(), ...)` |
-| `cps` | CPS 显示 | 显示 | 是 | 无 | 58×15，格式「12 CPS ｜ 8 CPS」，竖杠写死在 x=29；数字用正常字体（左组右对齐、右组左对齐），`CPS` 用 3×5 手绘小字（`MINI_C/P/S` 点阵）；每帧用 GLFW 上升沿计数，取最近 1000ms 的次数 |
+| `cps` | CPS 显示 | 显示 | 是 | 无 | 58×15，格式「12 CPS ｜ 8 CPS」，竖杠写死在 x=29；数字用正常字体（左组右对齐、右组左对齐），`CPS` 用 `MiniFont` 小字；每帧用 GLFW 上升沿计数，取最近 1000ms 的次数 |
 | `auto_sprint` | 自动疾跑 | 杂项 | 是 | 无 | 按着前进键就强制疾跑；骑乘/旁观/飞行/潜行/饥饿≤6 时不介入 |
+| `effect_timer` | 药水效果时间 | 显示 | 是 | 无 | 原版药水图标下方补一行剩余时间，`MiniFont` 小字（5px 高、4 字约 15px 宽），格式 `3m12` / 不足一分钟 `45`（**秒不带单位**：小字里 s 和 5 撞形），去掉小时段、分钟累加。**不是 HudWidget**：位置跟随原版图标由代码算出，不能在布局界面拖动。`HudElementRegistry.attachElementAfter(VanillaHudElements.STATUS_EFFECTS, ...)`，注册在模块构造函数里（`ModuleManager.init()` 在 `onInitializeClient` 内，时机合规） |
+| `gamma_override` | 伽马值覆写 | 视觉 | 是 | 无 | 开启后把亮度固定覆写成 10.0（暗处像夜视），关闭还原。**不能用 `OptionInstance.set()`**：超出 0–1 会被打日志并替换成默认值 0.5，只能反射改内部的 `value` 字段（按"非 static、非 final、类型 Object"识别，不写死字段名）。每 tick 检查被改回就重压；`CLIENT_STOPPING` 时还原；启动时若发现值 >1（上次崩溃残留）重置成 1.0 |
+| `pack_short_swords` | 短剑 | 视觉 | 是 | 无 | 内置包 `nanbeitnts_mod:short_swords` |
+| `pack_wool_outline` | 羊毛描边 | 视觉 | 是 | 无 | 内置包 `nanbeitnts_mod:wool_outline` |
+| `pack_transparent_gui` | 透明 GUI | 视觉 | 是 | 无 | 内置包 `nanbeitnts_mod:transparent_gui` |
+| `pack_sky` | 天空覆盖 | 视觉 | 是 | 无 | 内置包 `nanbeitnts_mod:sky`。**需要额外装 Skyboxify**（或 Nuit+Interop），原版不认 OptiFine 天空格式。生效期间原版云隐藏（`LevelRendererMixin`） |
+| `pack_crosshair` | 准星 | 视觉 | 是 | 无 | 内置包 `nanbeitnts_mod:crosshair` |
 
 ## 4. 资源与数据文件
 
@@ -102,19 +110,40 @@
 | --- | --- |
 | `src/main/resources/fabric.mod.json` | 模组元数据 |
 | `src/main/resources/nanbeitnts_mod.mixins.json` | 主端 Mixin 配置（当前列表为空） |
-| `src/client/resources/nanbeitnts_mod.client.mixins.json` | 客户端 Mixin 配置（当前列表为空） |
+| `src/client/resources/nanbeitnts_mod.client.mixins.json` | 客户端 Mixin 配置（当前含 `LevelRendererMixin`） |
 | `src/main/resources/assets/nanbeitnts_mod/icon.png` | 模组图标 128×128 |
+| `src/client/resources/resourcepacks/<id 路径>/` | 内置材质包本体（`short_swords` / `wool_outline` / `transparent_gui` / `sky` / `crosshair`）。**路径必须与 Identifier 的 path 一致**，Fabric 按 `resourcepacks/<path>` 找 |
 | `config/nanbeitnts_mod/config.json` | 运行时生成的配置（在 `.minecraft/` 下，不在仓库里） |
+
+### 内置材质包（`client.pack.PackSync`）
+
+- 注册：`onInitializeClient` 里 `PackSync.registerBuiltinPacks()` 用 `net.fabricmc.fabric.api.resource.v1.ResourceLoader.registerBuiltinPack(id, container, 显示名, PackActivationType.NORMAL)`，
+  `NORMAL` = 默认关闭、玩家也能在游戏自己的资源包列表里手动开关。
+- id 就是 `id.toString()`（`nanbeitnts_mod:short_swords`），也就是 `Options.resourcePacks` 里存的那个字符串。
+- **开关不立即生效**：拨动只 `markPending()`，等 `Screen instanceof TitleScreen` 的那一 tick 才同步
+  （`options.resourcePacks` 增删 id → `resourcePackRepository.setSelected` → `reloadResourcePacks()`），
+  避免游戏中途重载资源卡顿；启动时 `CLIENT_STARTED` 对齐一次（不一致才重载）。
+- 新增包只需三步：把包解到 `src/client/resources/resourcepacks/<path>/`、在 `PackSync` 加一个 `Identifier` 常量并进 `DEFS`、
+  在 `ModuleManager.init()` `register(new ResourcePackModule(...))`。
+- 已知风险：与其它同名文件的包（Bare Bones、Faithful 等）同时启用时，谁生效取决于列表顺序（当前实现是**追加到列表末尾**）。
+  玩家反馈"开了没效果"时，先看这一点。
+
 
 ### 关于 Mixin（重要）
 
-两个 mixin 配置目前都是**空列表**，模板自带的 `ExampleMixin` / `ExampleClientMixin` 已删除。
-原因：生产环境的 mixin 需要 refmap 把 Mojmap 方法名翻译成 intermediary 名，而打包产物里没有生成 refmap，
-`required: true` 会让游戏启动时直接崩。骨架阶段用不到 mixin，先清空。
+打包产物里**没有 refmap 文件，但这是正常的**：Loom 1.18 在 `remapJar` 阶段直接把注解里的名字改写成 intermediary
+（实测 `remapJar` 后 `LevelRendererMixin.class` 常量池里是 `Lnet/minecraft/class_761;` + `method = "method_62204"`，
+即 `LevelRenderer` / `addCloudsPass`）。所以 mixin json 里**不要**写 `"refmap"` 字段，写了反而找不到文件。
+前提是注入点只用名字/注解表达，**不要在 `@At` 里写需要翻译的方法名字符串**（那种就要 refmap）。
 
-以后真要写 mixin 时：在 `client/mixin/` 下建类并加进 `nanbeitnts_mod.client.mixins.json` 的 `client` 数组，
-然后**必须用生产 jar 实测一次**（`./gradlew runClient` 跑的是开发环境，掩盖 refmap 问题）。
-若加载报 "no refmap" 之类，需要在 mixin json 里补 `"refmap": "nanbeitnts_mod-refmap.json"` 并让 Loom 生成。
+现有客户端 mixin：
+
+| 类 | 目标 | 作用 |
+| --- | --- | --- |
+| `client.mixin.LevelRendererMixin` | `LevelRenderer.addCloudsPass`（HEAD，cancel） | 天空覆盖包生效时跳过原版云渲染。判定用 `PackSync.isSkyPackLoaded()`（看 `options.resourcePacks` 实际是否含 `nanbeitnts_mod:sky`），不改玩家的云设置 |
+
+新增 mixin：在 `client/mixin/` 下建类、加进 `nanbeitnts_mod.client.mixins.json` 的 `client` 数组，
+然后**用生产 jar 在真实实例里实测**（`runClient` 跑的是开发环境，不覆盖生产映射问题）。
 
 
 ---
@@ -130,6 +159,9 @@
      坐标和缩放由拖动界面改、由 `ConfigManager` 存进 `"widgets"`；要每 tick 跑就重写 `onTick(Minecraft)`（只在开启时被调到，挂点是 `START_CLIENT_TICK`，早于玩家移动计算）；
   4. 在 `ModuleManager.init()` 里 `register(new XxxModule())`，最后到本文档第 3 节加一行。
 - **不碰界面**：模块里不读文件、不画界面、不处理按键。
+- **构造函数里绝对不能碰 `Minecraft.getInstance().options` / `font` / `level` 这类成员**：
+  `onInitializeClient` 是在 `Minecraft.<init>` 内部被回调的，此时实例只是半成品（`options` 还是 null），
+  读了就是启动即崩（`GammaModule` 踩过）。要延后就挂 `ClientLifecycleEvents.CLIENT_STARTED` 或放到 tick/渲染里。
 
 ---
 
@@ -152,3 +184,11 @@
 | 2026-10-21 | `keystrokes` 收窄：键宽 20 → 18，整体 64×78 → 58×69；空格从 18 高的整键改成 9 高的扁条，不再写「空格」，改成居中一条 2px 横杠（宽 = 空格的 2/5），按下时横杠同样反色。 |
 | 2026-10-21 | 空格再调：横杠 2px → 1px，空格高 9 → 8（整体 58×68）。`HudWidget` 新增 `scale`（0.5–2.0）：尺寸拆成 `getBaseWidth/Height` + `getWidth/Height`，渲染走 `renderScaled`（`graphics.pose()` 推 `Matrix3x2fStack`）；`HudEditorScreen` 支持悬停在组件上滚轮缩放（0.1 一档，保持中心，取消可还原），配置 `"widgets"` 增加 `"scale"`。 |
 | 2026-10-21 | 新增 `cps`（CPS 显示）：58×15，宽度对齐按键显示的空格键。**正常字号放不下两组「NN CPS」（约需 78px），所以 `CPS` 三个字母改用 3×5 手绘点阵小字**（`drawMini` 逐像素 `fill`），数字仍是正常字体。竖杠 `BAR_X = WIDTH/2` 写死，左组右对齐、右组左对齐，位数变化只影响外侧。计数：每帧读 `glfwGetMouseButton` 做上升沿，`Deque<Long>` 存最近 1000ms 的按下时间戳，`size()` 即 CPS（没有 tick 钩子，靠 HUD 每帧渲染驱动）。 |
+| 2026-10-22 | 新增 `effect_timer`（药水效果时间）：挂在 `VanillaHudElements.STATUS_EFFECTS` 之后，用原版 `renderEffects` 的同一套排版（图标 24×24、横格 25、行距 26；良性在 y=1 一行、恶性 y=1+26n）算出每个图标坐标，在底边居中画剩余时间（向上取整到秒）。打开会展示效果详情的界面（`screen.showsActiveEffects()`）时随原版一起不画。无限时长不画文字。**故意不做成 `HudWidget`**：位置由原版图标推导，拖动会错位。 |
+| 2026-10-22 | `effect_timer` 时间格式改为 `3m12`：去掉小时段、分钟累加，分钟存在时秒不写单位（`3m12s` 有 5 个字约 28px，塞不进 25px 的格子）；不足一分钟仍写 `12s`，否则单个数字看不出含义。 |
+| 2026-10-22 | 新增 `gamma_override`（伽马值覆写，视觉）：亮度覆写到 10.0。**踩坑：`OptionInstance.set()` 会先过 `ValueSet.validateValue`（gamma 是 `UnitDouble`，只允许 0–1），超范围时打 `Illegal option value` 日志并返回 `initialValue`（0.5），等于无效**。改为反射改 `OptionInstance.value` 字段（筛选：非 static、非 final、类型 Object —— 跨 Mojmap/intermediary 都唯一命中）。`LightTexture.tick()` 每 tick 置 `updateLightTexture`，所以改字段下一 tick 就生效。配置加载走 `applyLoadedState` 不触发 `onEnable`，原值改在 `onTick` 里补记。 |
+| 2026-10-22 | `effect_timer` 剩余时间彻底不带 `s`（点阵小字里 s 和 5 撞形）：有分钟 `3m12`，不足一分钟只剩 `45`。 |
+| 2026-10-22 | 抽出 `client.gui.MiniFont`（3×5 点阵，字符集 `0-9 C P S m s`），`CpsModule` 原来私有的 `MINI_C/P/S` 点阵与 `drawMini` 全部删掉改用共用类（渲染结果不变）。`effect_timer` 的剩余时间也换成小字：5px 高、`3m12` 只占 15px，纵向不再压到下一行图标（原 9px 字会盖住下一行顶部 7px）。 |
+| 2026-10-22 | 修启动崩溃：`gamma_override` 在构造函数里读了 `mc.options.gamma()`，但 `onInitializeClient` 跑在 `Minecraft.<init>` 内部、`options` 仍是 null → `NullPointerException` 直接挂在 entrypoint。改为把"启动清理残留亮度"挂到 `ClientLifecycleEvents.CLIENT_STARTED`。 |
+| 2026-10-22 | 天空覆盖包生效时不再画原版云：新增客户端首个 mixin `LevelRendererMixin`，注入 `LevelRenderer.addCloudsPass` HEAD 并 cancel。判定看 `options.resourcePacks` 是否实际含 `nanbeitnts_mod:sky`（`PackSync.isSkyPackLoaded()`），因此与天空贴图的生效时机一致（回主菜单），也不改玩家的"云"设置。顺带确认 Loom 1.18 的 remapJar 会直接把注解名改写成 intermediary，不需要 refmap。 |
+| 2026-10-22 | 新增 5 个内置材质包开关（视觉）：短剑 / 羊毛描边 / 透明 GUI / 天空覆盖 / 准星。包体在 `src/client/resources/resourcepacks/<id>/`，用 `ResourceLoader.registerBuiltinPack` 以 `NORMAL` 注册，开关状态延迟到回主菜单时才同步（`PackSync`），避免对战中重载资源。天空包依赖 Skyboxify 才有效果。 |

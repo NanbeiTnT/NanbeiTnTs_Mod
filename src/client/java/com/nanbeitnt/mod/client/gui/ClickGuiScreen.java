@@ -5,6 +5,7 @@ import com.nanbeitnt.mod.client.config.ConfigManager;
 import com.nanbeitnt.mod.client.module.Category;
 import com.nanbeitnt.mod.client.module.Module;
 import com.nanbeitnt.mod.client.module.ModuleManager;
+import com.nanbeitnt.mod.client.pack.PackSync;
 import com.nanbeitnt.mod.client.setting.BooleanSetting;
 import com.nanbeitnt.mod.client.setting.ButtonSetting;
 import com.nanbeitnt.mod.client.setting.KeySetting;
@@ -85,6 +86,11 @@ public class ClickGuiScreen extends Screen {
 		graphics.fill(panelX + SIDEBAR_W - 1, panelY + HEADER_H, panelX + SIDEBAR_W, panelY + panelH, Theme.BORDER);
 
 		drawSidebar(graphics, font);
+
+		// 材质包开关是延迟生效的，不提示的话玩家会以为开关没反应
+		if (PackSync.isPending()) {
+			graphics.drawString(font, "材质包改动回主菜单生效", panelX + 12, panelY + panelH - 14, Theme.ACCENT, false);
+		}
 
 		graphics.enableScissor(panelX + SIDEBAR_W, panelY + HEADER_H, panelX + panelW, panelY + panelH);
 		drawContent(graphics, font, mouseX, mouseY);

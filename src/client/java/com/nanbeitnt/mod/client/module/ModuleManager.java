@@ -4,10 +4,14 @@ import com.nanbeitnt.mod.client.config.ConfigManager;
 import com.nanbeitnt.mod.client.module.impl.CoreModule;
 import com.nanbeitnt.mod.client.module.impl.CpsModule;
 import com.nanbeitnt.mod.client.module.impl.DemoModule;
+import com.nanbeitnt.mod.client.module.impl.EffectTimerModule;
 import com.nanbeitnt.mod.client.module.impl.FpsModule;
+import com.nanbeitnt.mod.client.module.impl.GammaModule;
 import com.nanbeitnt.mod.client.module.impl.HudLayoutModule;
 import com.nanbeitnt.mod.client.module.impl.KeystrokesModule;
+import com.nanbeitnt.mod.client.module.impl.ResourcePackModule;
 import com.nanbeitnt.mod.client.module.impl.SprintModule;
+import com.nanbeitnt.mod.client.pack.PackSync;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 
@@ -27,10 +31,20 @@ public final class ModuleManager {
 		core = (CoreModule) register(new CoreModule());
 		register(new CpsModule());
 		register(new DemoModule());
+		register(new EffectTimerModule());
 		register(new FpsModule());
+		register(new GammaModule());
 		register(new HudLayoutModule());
 		register(new KeystrokesModule());
 		register(new SprintModule());
+
+		// 内置材质包开关，一一对应 jar 里 resourcepacks/ 下的包
+		register(new ResourcePackModule("pack_short_swords", "短剑", PackSync.SHORT_SWORDS));
+		register(new ResourcePackModule("pack_wool_outline", "羊毛描边", PackSync.WOOL_OUTLINE));
+		register(new ResourcePackModule("pack_transparent_gui", "透明 GUI", PackSync.TRANSPARENT_GUI));
+		register(new ResourcePackModule("pack_sky", "天空覆盖", PackSync.SKY));
+		register(new ResourcePackModule("pack_crosshair", "准星", PackSync.CROSSHAIR));
+
 		ConfigManager.load();
 	}
 
